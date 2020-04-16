@@ -1,0 +1,20 @@
+{
+    "name": "pickle",
+    "version": "0.0.1",
+    "main": "src/index.html",
+    "license": "GPL-3.0-or-later",
+    "dependencies": {
+        "react": "^16.13.1",
+        "react-dom": "^16.13.1",
+        "react-router-dom": "^5.1.2",
+        "react-select": "^3.1.0",
+        "react-spinners": "^0.8.1",
+        "typeface-lato": "0.0.75"
+    },
+    "browserslist": [
+        "since 2018"
+    ],
+    "devDependencies": {
+        "cssnano": "^4.1.10"
+    }
+}
