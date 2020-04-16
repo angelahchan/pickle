@@ -31,6 +31,6 @@ pub fn fail<T: Debug + Sized + Send + Sync + 'static>(x: T) -> Rejection {
     reject::custom(Error(x))
 }
 
-pub fn not_found() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::any().and_then(|| async { Err::<Infallible, _>(reject::not_found()) })
+pub fn not_found() -> impl Filter<Extract = impl Reply, Error = Infallible> + Clone {
+    warp::any().map(|| warp::http::StatusCode::NOT_FOUND)
 }
