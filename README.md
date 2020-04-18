@@ -58,8 +58,6 @@ DATA
           }
         ]
 
-    TODO: Where does the population information need to be?
-
     /data/disease/:disease
         disease description with stats for each affected region
 
@@ -72,6 +70,7 @@ DATA
                            , cases      : number?
                            , deaths     : number?
                            , recoveries : number?
+                           , population : number?
                            }
                          ]
         }
@@ -79,16 +78,20 @@ DATA
     /data/disease/:disease/in/:region
         disease stats over time within the given region
 
-        { id    : string
-        , links : [ { uri         : string
-                    , description : string
-                    }
-                  ]
-        , stats : [ { date       : string
-                    , cases      : number?
-                    , deaths     : number?
-                    , recoveries : number?
-                    }
-                  ]
+        { id         : string
+        , links      : [ { uri         : string
+                         , description : string
+                         }
+                       ]
+        , stats      : [ { date       : string
+                         , cases      : number?
+                         , deaths     : number?
+                         , recoveries : number?
+                         }
+                       ]
+        , population : [ { date       : string
+                         , population : number?
+                         }
+                       ]
         }
 ```

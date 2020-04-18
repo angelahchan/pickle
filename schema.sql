@@ -4,7 +4,7 @@
 -- regions, use the ISO 3166-1 code.
 
 CREATE TABLE region
-    ( id        TEXT PRIMARY KEY -- ISO 3166-1 alpha-2 / ISO 3166-2 / empty string
+    ( id        TEXT PRIMARY KEY -- ISO 3166-1 alpha-2 / ISO 3166-2
     , name      TEXT NOT NULL    -- a short English name of the region, in title-case
     , geometry  TEXT             -- a low-resolution GeoJSON geometry for the region
     );
@@ -28,7 +28,7 @@ CREATE TABLE disease_stats
     );
 
 CREATE TABLE disease_link
-    ( region      TEXT NOT NULL REFERENCES region(id)
+    ( region      TEXT REFERENCES region(id)
     , disease     TEXT NOT NULL REFERENCES disease(id)
     , uri         TEXT NOT NULL -- a URI that points to a human-readable resource
     , description TEXT NOT NULL -- the resource's purpose (CommonMark; first letter uncapitalized; no full stop)

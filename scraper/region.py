@@ -59,7 +59,7 @@ def is_bad_subdivision_name(name):
     if '(' in name or ')' in name: return True
     return False
 
-regions = { '': Region(iso='', name='World') }
+regions = {}
 
 for country in pycountry.countries:
     iso  = country.alpha_2
@@ -118,18 +118,15 @@ with load_shapefile(province_geo_url) as reader:
 
 q = '''
 SELECT DISTINCT ?region ?population ?date {
-  {
-    ?country p:P1082 [ ps:P1082 ?population ; pq:P585 ?date ] .
-    ?country wdt:P297 ?region .
-  } UNION {
-    ?province p:P1082 [ ps:P1082 ?population ; pq:P585 ?date ] .
-    ?province wdt:P300 ?region .
-  } UNION {
-    LET ( ?region := "" )
-    wd:Q2 p:P1082 [ ps:P1082 ?population ; pq:P585 ?date ] .
-  }
+    {
+        ?country p:P1082 [ ps:P1082 ?population ; pq:P585 ?date ] .
+        ?country wdt:P297 ?region .
+    } UNION {
+        ?province p:P1082 [ ps:P1082 ?population ; pq:P585 ?date ] .
+        ?province wdt:P300 ?region .
+    }
 
-  FILTER (YEAR(?date) >= 2000)
+    FILTER (YEAR(?date) >= 2000)
 }
 '''
 
@@ -152,15 +149,15 @@ with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
     with conn.cursor() as cur:
         execute_values(cur, '''
             INSERT INTO region(id, name, geometry)
-                VALUES %s
-                ON CONFLICT (id) DO UPDATE SET
-                    name = excluded.name,
-                    geometry = COALESCE(excluded.geometry, region.geometry)
+            VALUES %s
+            ON CONFLICT (id) DO UPDATE SET
+                name = excluded.name,
+                geometry = COALESCE(excluded.geometry, region.geometry)
         ''', [(r.iso, r.name, r.geometry) for r in regions.values()])
 
         execute_values(cur, '''
             INSERT INTO region_population(region, date, population)
-                VALUES %s
-                ON CONFLICT (region, date) DO UPDATE SET
-                    population = excluded.population
+            VALUES %s
+            ON CONFLICT (region, date) DO UPDATE SET
+                population = excluded.population
         ''', [(iso, date, pop) for (iso, date), pop in pops.items()])

@@ -19,7 +19,7 @@ disease = {
     'reinfectable': False,
     'popularity': 1,
     'links': [
-        ['', 'https://example.com', 'something helpful'],
+        [None, 'https://example.com', 'something helpful'],
         ['AU', 'https://example.com', 'something helpful, too'],
         ['AU-NSW', 'https://example.com', 'more helpful stuff']
     ]
@@ -70,12 +70,12 @@ with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
     with conn.cursor() as cur:
         cur.execute('''
             INSERT INTO disease(id, name, description, reinfectable, popularity)
-                VALUES (%(id)s, %(name)s, %(description)s, %(reinfectable)s, %(popularity)s)
-                ON CONFLICT (id) DO UPDATE SET
-                    name = excluded.name,
-                    description = excluded.description,
-                    reinfectable = excluded.reinfectable,
-                    popularity = excluded.popularity
+            VALUES (%(id)s, %(name)s, %(description)s, %(reinfectable)s, %(popularity)s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = excluded.name,
+                description = excluded.description,
+                reinfectable = excluded.reinfectable,
+                popularity = excluded.popularity
         ''', disease)
 
         cur.execute('''
@@ -84,7 +84,7 @@ with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
 
         execute_values(cur, '''
             INSERT INTO disease_link(region, disease, uri, description)
-                VALUES %s
+            VALUES %s
         ''', [
             (region, disease['name'], uri, desc)
             for region, uri, desc in disease['links']
@@ -93,13 +93,13 @@ with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
         execute_values(cur, '''
             INSERT INTO disease_stats(disease, region, date, cases, deaths, recoveries)
                 SELECT disease, region, date, cases::BIGINT, deaths::BIGINT, recoveries::BIGINT
-                    FROM (VALUES %s)
-                        AS raw(disease, region, date, cases, deaths, recoveries)
-                    WHERE EXISTS(SELECT 1 FROM region WHERE region.id = raw.region)
-                ON CONFLICT (disease, region, date) DO UPDATE SET
-                    cases = COALESCE(excluded.cases, disease_stats.cases),
-                    deaths = COALESCE(excluded.deaths, disease_stats.deaths),
-                    recoveries = COALESCE(excluded.recoveries, disease_stats.recoveries)
+                FROM (VALUES %s)
+                    AS raw(disease, region, date, cases, deaths, recoveries)
+                WHERE EXISTS(SELECT 1 FROM region WHERE region.id = raw.region)
+            ON CONFLICT (disease, region, date) DO UPDATE SET
+                cases = COALESCE(excluded.cases, disease_stats.cases),
+                deaths = COALESCE(excluded.deaths, disease_stats.deaths),
+                recoveries = COALESCE(excluded.recoveries, disease_stats.recoveries)
         ''', [
             (disease['id'], iso, date, v['cases'], v['deaths'], v['recoveries'])
             for iso in result

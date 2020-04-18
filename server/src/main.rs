@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use std::env;
 use std::net::IpAddr;
 use std::error::Error;
@@ -168,16 +169,28 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
         cases: Option<i64>,
         deaths: Option<i64>,
         recoveries: Option<i64>,
+        population: Option<i64>,
     }
-
-    // TODO(quadrupleslap): Fix this.
 
     let stats = conn
         .query("
-            SELECT region, MAX(cases), MAX(deaths), MAX(recoveries)
-                FROM disease_stats
-                WHERE disease = $1
-                GROUP BY region
+            SELECT
+                region,
+                MAX(cases),
+                MAX(deaths),
+                MAX(recoveries),
+                (
+                    SELECT population
+                    FROM region_population
+                    WHERE
+                        region_population.region = disease_stats.region AND
+                        population IS NOT NULL
+                    ORDER BY region_population.date DESC
+                    LIMIT 1
+                )
+            FROM disease_stats
+            WHERE disease = $1
+            GROUP BY region
         ", &[&id])
         .await
         .map_err(fail)?
@@ -187,14 +200,15 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
             cases: row.get(1),
             deaths: row.get(2),
             recoveries: row.get(3),
+            population: row.get(4),
         })
         .collect();
 
     let row = conn
         .query_one("
             SELECT name, description, reinfectable, popularity
-                FROM disease
-                WHERE id = $1
+            FROM disease
+            WHERE id = $1
         ", &[&id])
         .await
         .map_err(fail)?;
@@ -219,6 +233,7 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
         id: String,
         links: Vec<Link>,
         stats: Vec<Stat>,
+        population: Vec<Population>,
     }
 
     #[derive(serde::Serialize)]
@@ -229,19 +244,25 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
 
     #[derive(serde::Serialize)]
     struct Stat {
-        date: String,
+        date: NaiveDate,
         cases: Option<i64>,
         deaths: Option<i64>,
         recoveries: Option<i64>,
     }
 
+    #[derive(serde::Serialize)]
+    struct Population {
+        date: NaiveDate,
+        population: Option<i64>,
+    }
+
     let links = conn
         .query("
             SELECT uri, description
-                FROM disease_link
-                WHERE
-                    disease = $1 AND
-                    (region = '' OR region = $2 OR starts_with($2, region || '-'))
+            FROM disease_link
+            WHERE
+                disease = $1 AND
+                (region IS NULL OR region = $2 OR starts_with($2, region || '-'))
         ", &[&id, &region])
         .await
         .map_err(fail)?
@@ -252,13 +273,13 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
         })
         .collect();
 
-    let stats = conn
+    let stats: Vec<_> = conn
         .query("
-            SELECT date::TEXT, cases, deaths, recoveries
-                FROM disease_stats
-                WHERE
-                    disease = $1 AND
-                    region = $2
+            SELECT date, cases, deaths, recoveries
+            FROM disease_stats
+            WHERE
+                disease = $1 AND
+                region = $2
         ", &[&id, &region])
         .await
         .map_err(fail)?
@@ -271,7 +292,35 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
         })
         .collect();
 
-    let result = Disease { id, links, stats };
+    let population = if let (Some(min), Some(max)) = (
+        stats.iter().map(|x| x.date).min(),
+        stats.iter().map(|x| x.date).max(),
+    ) {
+        conn
+            .query("
+                SELECT date, population
+                FROM region_population
+                WHERE
+                    region = $1 AND
+                    (
+                        ($2 <= date AND date <= $3) OR
+                        (date < $2 AND date >= ALL(SELECT date FROM region_population WHERE region = $1 AND date < $2)) OR
+                        (date > $3 AND date <= ALL(SELECT date FROM region_population WHERE region = $1 AND date > $3))
+                    )
+            ", &[&region, &min, &max])
+            .await
+            .map_err(fail)?
+            .iter()
+            .map(|row| Population {
+                date: row.get(0),
+                population: row.get(1),
+            })
+            .collect()
+    } else {
+        vec![]
+    };
+
+    let result = Disease { id, links, stats, population };
 
     Ok(warp::reply::json(&result))
 }
