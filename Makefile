@@ -11,7 +11,8 @@ $(OUT)/geolite2-city.mmdb:
 	tar -xf $@ $$(tar -tf $@ | grep -m1 '.mmdb$$') --transform 's!.*!$@!'
 
 server:
-	cd server && cargo build --release --out-dir ../$(OUT) -Z unstable-options
+	cd server && cargo build --release
+	cp server/target/release/pickle $(OUT)/pickle
 
 client:
 	parcel build -d $(OUT)/static client/src/index.html

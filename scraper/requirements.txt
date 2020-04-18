@@ -1,0 +1,4 @@
+pycountry==19.8.18
+psycopg2==2.8.4
+requests==2.23.0
+pyshp==2.1.0

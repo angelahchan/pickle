@@ -1,6 +1,38 @@
 # Pickle
 
-Pickle gives you simple summaries of pandemics.
+Pickle informs you about pandemics.
+
+## Getting Started
+
+1. Install the requirements.
+2. Run `npm install` in `/client`.
+3. Run `pip install -r requirements.txt` in `/scraper`.
+4. Set up a new PostgreSQL database and initialize it with `schema.sql`.
+5. Run the scrapers to populate the database.
+6. Set the environment variables.
+7. Run `make run` in the project root to start the server.
+
+## Requirements
+
+|-----------------|----------------|
+| Requirement     | Tested Version |
+|-----------------|----------------|
+| Rust            | 1.42.0         |
+| PostgreSQL      | 12.2           |
+| GNU Make        | 4.3            |
+| Python          | 3.8.2          |
+| Parcel          | 1.12.4         |
+|-----------------|----------------|
+
+## Environment Variables
+
+|----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
+| Variable       | Example                            | Required? | Description                                                                            |
+|----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
+| `MAXMIND_KEY`  | `369DBF124085C7A`                  | Yes       | The key used to download the MaxMind GeoLite2 database, which does the IP geolocation. |
+| `DATABASE_URL` | `postgres://localhost:5432/pickle` | Yes       | The URL to the main database.                                                          |
+| `PORT`         | `8000`                             | No        | The port for the server to listen on.                                                  |
+|----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
 
 ## Endpoints
 
