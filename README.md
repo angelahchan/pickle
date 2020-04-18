@@ -14,7 +14,6 @@ Pickle informs you about pandemics.
 
 ## Requirements
 
-|-----------------|----------------|
 | Requirement     | Tested Version |
 |-----------------|----------------|
 | Rust            | 1.42.0         |
@@ -22,17 +21,14 @@ Pickle informs you about pandemics.
 | GNU Make        | 4.3            |
 | Python          | 3.8.2          |
 | Parcel          | 1.12.4         |
-|-----------------|----------------|
 
 ## Environment Variables
 
-|----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
 | Variable       | Example                            | Required? | Description                                                                            |
 |----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
 | `MAXMIND_KEY`  | `369DBF124085C7A`                  | Yes       | The key used to download the MaxMind GeoLite2 database, which does the IP geolocation. |
 | `DATABASE_URL` | `postgres://localhost:5432/pickle` | Yes       | The URL to the main database.                                                          |
 | `PORT`         | `8000`                             | No        | The port for the server to listen on.                                                  |
-|----------------|------------------------------------|-----------|----------------------------------------------------------------------------------------|
 
 ## Endpoints
 
