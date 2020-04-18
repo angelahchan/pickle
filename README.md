@@ -31,9 +31,8 @@ DATA
     /data/region
         region list
 
-        [ { id       : string  -- "US"
-          , name     : string  -- "United States"
-          , the      : boolean -- true
+        [ { id   : string -- "US"
+          , name : string -- "United States"
           }
         ]
 
@@ -47,29 +46,49 @@ DATA
 
         { id       : string  -- "US"
         , name     : string  -- "United States"
-        , the      : boolean -- true
         , geometry : object? -- { ... GeoJSON geometry ... }
         }
 
-    /data/stats/:disease
-        latest disease stats for each region
+    /data/disease
+        list of diseases
 
         [ { id         : string
-          , population : number?
-          , cases      : number?
-          , deaths     : number?
-          , recoveries : number?
+          , name       : string
+          , popularity : number
           }
         ]
 
-    /data/stats/:disease/in/:region
+    TODO: Where does the population information need to be?
+
+    /data/disease/:disease
+        disease description with stats for each affected region
+
+        { id           : string
+        , name         : string
+        , description  : string
+        , reinfectable : boolean
+        , popularity   : number
+        , stats        : [ { region     : string
+                           , cases      : number?
+                           , deaths     : number?
+                           , recoveries : number?
+                           }
+                         ]
+        }
+
+    /data/disease/:disease/in/:region
         disease stats over time within the given region
 
-        [ { date       : string
-          , population : number?
-          , cases      : number?
-          , deaths     : number?
-          , recoveries : number?
-          }
-        ]
+        { id    : string
+        , links : [ { uri         : string
+                    , description : string
+                    }
+                  ]
+        , stats : [ { date       : string
+                    , cases      : number?
+                    , deaths     : number?
+                    , recoveries : number?
+                    }
+                  ]
+        }
 ```

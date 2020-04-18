@@ -39,11 +39,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Define the data routes.
 
     let data = warp::path("data").and(
-        (get() .and(db.with()) .and(path!("region"))                         .and_then(get_regions)                   ).or
-        (get() .and(with_ip()) .and(path!("region" / "current"))             .and_then(get_current_region)            ).or
-        (get() .and(db.with()) .and(path!("region" / String))                .and_then(get_region_by_id)              ).or
-        (get() .and(db.with()) .and(path!("stats" / String))                 .and_then(get_stats_by_disease)          ).or
-        (get() .and(db.with()) .and(path!("stats" / String / "in" / String)) .and_then(get_stats_by_disease_in_region)).or
+        (get() .and(db.with()) .and(path!("region"))             .and_then(get_regions)       ).or
+        (get() .and(with_ip()) .and(path!("region" / "current")) .and_then(get_current_region)).or
+        (get() .and(db.with()) .and(path!("region" / Id))        .and_then(get_region_by_id)  ).or
+
+        (get() .and(db.with()) .and(path!("disease"))                  .and_then(get_diseases)               ).or
+        (get() .and(db.with()) .and(path!("disease" / Id))             .and_then(get_disease_by_id)          ).or
+        (get() .and(db.with()) .and(path!("disease" / Id / "in" / Id)) .and_then(get_disease_by_id_in_region)).or
+
         (not_found())
     );
 
@@ -61,10 +64,9 @@ async fn get_regions(db: Database) -> Result<impl Reply, Rejection> {
     struct Region {
         id: String,
         name: String,
-        the: bool,
     }
 
-    let stmt = "SELECT id, name, geometry FROM region";
+    let stmt = "SELECT id, name FROM region";
 
     let rows = conn.query(stmt, &[]).await.map_err(fail)?;
 
@@ -73,7 +75,6 @@ async fn get_regions(db: Database) -> Result<impl Reply, Rejection> {
         .map(|row| Region {
             id: row.get(0),
             name: row.get(1),
-            the: row.get(2),
         })
         .collect::<Vec<_>>();
 
@@ -81,6 +82,8 @@ async fn get_regions(db: Database) -> Result<impl Reply, Rejection> {
 }
 
 async fn get_current_region(ip: Option<IpAddr>) -> Result<impl Reply, Rejection> {
+    const DEFAULT_REGION: &'static str = "AU";
+
     let country = match ip.and_then(|ip| geolocation::guess_by_ip(ip)) {
         Some(geolocation::Guess { country, subdivision: None }) => country,
         Some(geolocation::Guess { mut country, subdivision: Some(subdivision) }) => {
@@ -88,23 +91,23 @@ async fn get_current_region(ip: Option<IpAddr>) -> Result<impl Reply, Rejection>
             country.push_str(&subdivision);
             country
         },
-        None => "AU".into(),
+        None => DEFAULT_REGION.into(),
     };
+
     Ok(warp::reply::json(&country))
 }
 
-async fn get_region_by_id(db: Database, id: String) -> Result<impl Reply, Rejection> {
+async fn get_region_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
     #[derive(serde::Serialize)]
     struct Region {
         id: String,
         name: String,
-        the: bool,
-        geometry: String,
+        geometry: Option<String>,
     }
 
-    let stmt = "SELECT id, name, the, geometry FROM region WHERE id = $1";
+    let stmt = "SELECT id, name, geometry FROM region WHERE id = $1";
 
     let row = conn
         .query_one(stmt, &[&id])
@@ -114,98 +117,171 @@ async fn get_region_by_id(db: Database, id: String) -> Result<impl Reply, Reject
     let result = Region {
         id: row.get(0),
         name: row.get(1),
-        the: row.get(2),
-        geometry: row.get(3),
+        geometry: row.get(2),
     };
 
     Ok(warp::reply::json(&result))
 }
 
-async fn get_stats_by_disease(db: Database, disease: String) -> Result<impl Reply, Rejection> {
+async fn get_diseases(db: Database) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
     #[derive(serde::Serialize)]
-    struct Region {
+    struct Disease {
         id: String,
-        population: Option<i64>,
-        cases: Option<i64>,
-        deaths: Option<i64>,
-        recoveries: Option<i64>,
+        name: String,
+        popularity: f32,
     }
 
-    let stmt = "
-        SELECT
-            region,
-            (
-                SELECT population
-                FROM region_population
-                WHERE region_population.region = disease_stats.region
-                ORDER BY region_population.date DESC
-                LIMIT 1
-            ),
-            MAX(cases),
-            MAX(deaths),
-            MAX(recoveries)
-        FROM disease_stats
-        WHERE disease = 'COVID-19'
-        GROUP BY region
-    ";
+    let stmt = "SELECT id, name, popularity FROM disease";
 
-    let rows = conn.query(stmt, &[&disease]).await.map_err(fail)?;
+    let rows = conn.query(stmt, &[]).await.map_err(fail)?;
 
     let result = rows
         .iter()
-        .map(|row| Region {
+        .map(|row| Disease {
             id: row.get(0),
-            population: row.get(1),
-            cases: row.get(2),
-            deaths: row.get(3),
-            recoveries: row.get(4),
+            name: row.get(1),
+            popularity: row.get(2),
         })
         .collect::<Vec<_>>();
 
     Ok(warp::reply::json(&result))
 }
 
-async fn get_stats_by_disease_in_region(db: Database, disease: String, region: String) -> Result<impl Reply, Rejection> {
+async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
     #[derive(serde::Serialize)]
+    struct Disease {
+        id: String,
+        name: String,
+        description: String,
+        reinfectable: bool,
+        popularity: f32,
+        stats: Vec<Stat>,
+    }
+
+    #[derive(serde::Serialize)]
     struct Stat {
-        date: String,
-        population: Option<i64>,
+        region: String,
         cases: Option<i64>,
         deaths: Option<i64>,
         recoveries: Option<i64>,
     }
 
-    let stmt = "
-        SELECT
-            COALESCE(disease_stats.date, region_population.date),
-            population,
-            cases,
-            deaths,
-            recoveries
-        FROM disease_stats
-        FULL OUTER JOIN region_population
-            ON region_population.date = disease_stats.date
-        WHERE disease = $1
-            AND disease_stats.region = $2
-            AND region_population.region = $2
-    ";
+    // TODO(quadrupleslap): Fix this.
 
-    let rows = conn.query(stmt, &[&disease, &region]).await.map_err(fail)?;
+    let stats = conn
+        .query("
+            SELECT region, MAX(cases), MAX(deaths), MAX(recoveries)
+                FROM disease_stats
+                WHERE disease = $1
+                GROUP BY region
+        ", &[&id])
+        .await
+        .map_err(fail)?
+        .iter()
+        .map(|row| Stat {
+            region: row.get(0),
+            cases: row.get(1),
+            deaths: row.get(2),
+            recoveries: row.get(3),
+        })
+        .collect();
 
-    let result = rows
+    let row = conn
+        .query_one("
+            SELECT name, description, reinfectable, popularity
+                FROM disease
+                WHERE id = $1
+        ", &[&id])
+        .await
+        .map_err(fail)?;
+
+    let result = Disease {
+        id,
+        name: row.get(0),
+        description: row.get(1),
+        reinfectable: row.get(2),
+        popularity: row.get(3),
+        stats,
+    };
+
+    Ok(warp::reply::json(&result))
+}
+
+async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -> Result<impl Reply, Rejection> {
+    let conn = db.get().await.map_err(fail)?;
+
+    #[derive(serde::Serialize)]
+    struct Disease {
+        id: String,
+        links: Vec<Link>,
+        stats: Vec<Stat>,
+    }
+
+    #[derive(serde::Serialize)]
+    struct Link {
+        uri: String,
+        description: String,
+    }
+
+    #[derive(serde::Serialize)]
+    struct Stat {
+        date: String,
+        cases: Option<i64>,
+        deaths: Option<i64>,
+        recoveries: Option<i64>,
+    }
+
+    let links = conn
+        .query("
+            SELECT uri, description
+                FROM disease_link
+                WHERE
+                    disease = $1 AND
+                    (region = '' OR region = $2 OR starts_with($2, region || '-'))
+        ", &[&id, &region])
+        .await
+        .map_err(fail)?
+        .iter()
+        .map(|row| Link {
+            uri: row.get(0),
+            description: row.get(1),
+        })
+        .collect();
+
+    let stats = conn
+        .query("
+            SELECT date::TEXT, cases, deaths, recoveries
+                FROM disease_stats
+                WHERE
+                    disease = $1 AND
+                    region = $2
+        ", &[&id, &region])
+        .await
+        .map_err(fail)?
         .iter()
         .map(|row| Stat {
             date: row.get(0),
-            population: row.get(1),
-            cases: row.get(2),
-            deaths: row.get(3),
-            recoveries: row.get(4),
+            cases: row.get(1),
+            deaths: row.get(2),
+            recoveries: row.get(3),
         })
-        .collect::<Vec<_>>();
+        .collect();
+
+    let result = Disease { id, links, stats };
 
     Ok(warp::reply::json(&result))
+}
+
+/// An identifier, converted into uppercase.
+struct Id(pub String);
+
+impl std::str::FromStr for Id {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.to_uppercase()))
+    }
 }

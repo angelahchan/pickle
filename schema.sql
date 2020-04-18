@@ -1,23 +1,20 @@
 -- # Notes
 --
--- * Some regions have codes in both ISO 3166-1 and ISO 3166-2. For these
---   regions, use the ISO 3166-1 code.
--- * The `disease` and `disease_link` table is updated entirely by hand. Other
---   tables are updated using helper scripts.
+-- Some regions have codes in both ISO 3166-1 and ISO 3166-2. For these
+-- regions, use the ISO 3166-1 code.
 
 CREATE TABLE region
     ( id        TEXT PRIMARY KEY -- ISO 3166-1 alpha-2 / ISO 3166-2 / empty string
-    , name      TEXT NOT NULL    -- A short English name of the region, in title-case.
-    , the       TEXT NOT NULL    -- Whether "the" should appear before the name in a sentence.
-    , geometry  TEXT NOT NULL    -- A low-resolution GeoJSON geometry for the region.
+    , name      TEXT NOT NULL    -- a short English name of the region, in title-case
+    , geometry  TEXT             -- a low-resolution GeoJSON geometry for the region
     );
 
 CREATE TABLE disease
-    ( id            TEXT PRIMARY KEY -- A codename for the disease.
-    , name          TEXT NOT NULL    -- A human-readable name for the disease.
-    , description   TEXT NOT NULL    -- A one-sentence summary of the disease.
-    , reinfectable  BOOLEAN NOT NULL -- Whether a significant number of people will be infected multiple times.
-    , popularity    FLOAT NOT NULL   -- The "ranking" of this disease.
+    ( id            TEXT PRIMARY KEY -- an uppercase codename for the disease
+    , name          TEXT NOT NULL    -- a human-readable name for the disease
+    , description   TEXT NOT NULL    -- a CommonMark article describing the disease
+    , reinfectable  BOOLEAN NOT NULL -- whether a significant number of people will be infected multiple times
+    , popularity    REAL NOT NULL    -- the "ranking" of this disease
     );
 
 CREATE TABLE disease_stats
@@ -33,8 +30,8 @@ CREATE TABLE disease_stats
 CREATE TABLE disease_link
     ( region      TEXT NOT NULL REFERENCES region(id)
     , disease     TEXT NOT NULL REFERENCES disease(id)
-    , uri         TEXT NOT NULL
-    , description TEXT NOT NULL
+    , uri         TEXT NOT NULL -- a URI that points to a human-readable resource
+    , description TEXT NOT NULL -- the resource's purpose (CommonMark; first letter uncapitalized; no full stop)
     );
 
 CREATE TABLE region_population
