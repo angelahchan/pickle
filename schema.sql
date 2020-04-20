@@ -11,7 +11,8 @@ CREATE TABLE region
 
 CREATE TABLE disease
     ( id            TEXT PRIMARY KEY -- an uppercase codename for the disease
-    , name          TEXT NOT NULL    -- a human-readable name for the disease
+    , name          TEXT NOT NULL    -- a human-readable name for the disease, in title-case
+    , long_name     TEXT NOT NULL    -- a longer name, in lower-case
     , description   TEXT NOT NULL    -- a CommonMark article describing the disease
     , reinfectable  BOOLEAN NOT NULL -- whether a significant number of people will be infected multiple times
     , popularity    REAL NOT NULL    -- the "ranking" of this disease

@@ -37,10 +37,10 @@ FRONTEND
     /
         redirect to /{most popular disease}/in/{guessed user region}
 
-    /:disease/
-        summary of the disease
+    /:disease
+        redirect to /:disease/in/{guessed user region}
 
-    /:disease/table
+    /:disease/map
         latest disease statistics by country
 
     /:disease/in/:region

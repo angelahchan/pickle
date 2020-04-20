@@ -131,10 +131,11 @@ async fn get_diseases(db: Database) -> Result<impl Reply, Rejection> {
     struct Disease {
         id: String,
         name: String,
+        long_name: String,
         popularity: f32,
     }
 
-    let stmt = "SELECT id, name, popularity FROM disease";
+    let stmt = "SELECT id, name, long_name, popularity FROM disease";
 
     let rows = conn.query(stmt, &[]).await.map_err(fail)?;
 
@@ -143,7 +144,8 @@ async fn get_diseases(db: Database) -> Result<impl Reply, Rejection> {
         .map(|row| Disease {
             id: row.get(0),
             name: row.get(1),
-            popularity: row.get(2),
+            long_name: row.get(2),
+            popularity: row.get(3),
         })
         .collect::<Vec<_>>();
 
@@ -157,6 +159,7 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
     struct Disease {
         id: String,
         name: String,
+        long_name: String,
         description: String,
         reinfectable: bool,
         popularity: f32,
@@ -206,7 +209,7 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
 
     let row = conn
         .query_one("
-            SELECT name, description, reinfectable, popularity
+            SELECT name, long_name, description, reinfectable, popularity
             FROM disease
             WHERE id = $1
         ", &[&id])
@@ -216,9 +219,10 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
     let result = Disease {
         id,
         name: row.get(0),
-        description: row.get(1),
-        reinfectable: row.get(2),
-        popularity: row.get(3),
+        long_name: row.get(1),
+        description: row.get(2),
+        reinfectable: row.get(3),
+        popularity: row.get(4),
         stats,
     };
 

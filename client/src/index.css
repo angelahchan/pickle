@@ -1,1 +1,32 @@
-@import 'typeface-lato/index.css';
+html {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 1.5rem;
+}
+
+header, h1, h2, h3, h4, h5, h6 {
+    font-family: 'Crimson Text', serif;
+}
+
+header {
+    text-align: center;
+}
+
+nav a {
+    text-decoration: none;
+    color: initial;
+}
+
+nav a.active, a {
+    color: #0066CC;
+    text-decoration: underline;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+article {
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+}
