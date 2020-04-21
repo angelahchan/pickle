@@ -15,6 +15,7 @@ COVID-19 is a disease and it sucks.
 disease = {
     'id': 'COVID-19',
     'name': 'COVID-19',
+    'long_name': 'coronavirus disease 2019',
     'description': description,
     'reinfectable': False,
     'popularity': 1,
@@ -69,10 +70,11 @@ for loc in data.values():
 with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
     with conn.cursor() as cur:
         cur.execute('''
-            INSERT INTO disease(id, name, description, reinfectable, popularity)
-            VALUES (%(id)s, %(name)s, %(description)s, %(reinfectable)s, %(popularity)s)
+            INSERT INTO disease(id, name, long_name, description, reinfectable, popularity)
+            VALUES (%(id)s, %(name)s, %(long_name)s, %(description)s, %(reinfectable)s, %(popularity)s)
             ON CONFLICT (id) DO UPDATE SET
                 name = excluded.name,
+                long_name = excluded.long_name,
                 description = excluded.description,
                 reinfectable = excluded.reinfectable,
                 popularity = excluded.popularity

@@ -9,7 +9,7 @@ export default function DiseaseSelect({}) {
     if (err) return <Error error={err} />;
     if (res == null) return <Loading />;
 
-    let select = res != null
+    let select = (res != null)
         ? Array
             .from(res)
             .sort((x, y) => y.popularity - x.popularity)

@@ -69,13 +69,14 @@ DATA
 
         string
 
-    /data/region/:id
-        get additional information about the given region
+    /data/region/subregions/:id
+        subregion list; leave :id empty for a list of countries
 
-        { id       : string  -- "US"
-        , name     : string  -- "United States"
-        , geometry : object? -- { ... GeoJSON geometry ... }
-        }
+        [ { id       : string  -- "US"
+          , name     : string  -- "United States"
+          , geometry : object? -- { ... GeoJSON geometry ... }
+          }
+        ]
 
     /data/disease
         list of diseases

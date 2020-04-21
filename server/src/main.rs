@@ -5,6 +5,7 @@ use std::error::Error;
 use warp::{get, path, Reply, Filter, Rejection};
 use database::Database;
 use util::{fail, with_ip, not_found};
+use serde::Serialize;
 
 mod database;
 mod geolocation;
@@ -40,9 +41,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Define the data routes.
 
     let data = warp::path("data").and(
-        (get() .and(db.with()) .and(path!("region"))             .and_then(get_regions)       ).or
-        (get() .and(with_ip()) .and(path!("region" / "current")) .and_then(get_current_region)).or
-        (get() .and(db.with()) .and(path!("region" / Id))        .and_then(get_region_by_id)  ).or
+        (get() .and(db.with()) .and(path!("region"))                     .and_then(get_regions)                      ).or
+        (get() .and(with_ip()) .and(path!("region" / "current"))         .and_then(get_current_region)               ).or
+        (get() .and(db.with()) .and(path!("region" / "subregions" / Id)) .and_then(|x, y| get_subregions(x, Some(y)))).or
+        (get() .and(db.with()) .and(path!("region" / "subregions"))      .and_then(|x| get_subregions(x, None))      ).or
 
         (get() .and(db.with()) .and(path!("disease"))                  .and_then(get_diseases)               ).or
         (get() .and(db.with()) .and(path!("disease" / Id))             .and_then(get_disease_by_id)          ).or
@@ -53,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Start the server.
 
-    let routes = data.or(static_files);
+    let routes = data.or(static_files).with(warp::compression::gzip());
 
     Ok(warp::serve(routes).run((ip, port)).await)
 }
@@ -61,7 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn get_regions(db: Database) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Region {
         id: String,
         name: String,
@@ -98,28 +100,37 @@ async fn get_current_region(ip: Option<IpAddr>) -> Result<impl Reply, Rejection>
     Ok(warp::reply::json(&country))
 }
 
-async fn get_region_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejection> {
+async fn get_subregions(db: Database, country: Option<Id>) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Region {
         id: String,
         name: String,
         geometry: Option<String>,
     }
 
-    let stmt = "SELECT id, name, geometry FROM region WHERE id = $1";
-
-    let row = conn
-        .query_one(stmt, &[&id])
-        .await
-        .map_err(fail)?;
-
-    let result = Region {
-        id: row.get(0),
-        name: row.get(1),
-        geometry: row.get(2),
-    };
+    let result: Vec<_> =
+        match country {
+            Some(Id(id)) => conn.query("
+                SELECT id, name, geometry
+                FROM region
+                WHERE starts_with(id, $1 || '-')
+            ", &[&id]).await,
+            None => conn.query("
+                SELECT id, name, geometry
+                FROM region
+                WHERE id NOT LIKE '%-%'
+            ", &[]).await,
+        }
+        .map_err(fail)?
+        .iter()
+        .map(|row| Region {
+            id: row.get(0),
+            name: row.get(1),
+            geometry: row.get(2),
+        })
+        .collect();
 
     Ok(warp::reply::json(&result))
 }
@@ -127,7 +138,7 @@ async fn get_region_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Reject
 async fn get_diseases(db: Database) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Disease {
         id: String,
         name: String,
@@ -155,7 +166,7 @@ async fn get_diseases(db: Database) -> Result<impl Reply, Rejection> {
 async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Disease {
         id: String,
         name: String,
@@ -166,7 +177,7 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
         stats: Vec<Stat>,
     }
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Stat {
         region: String,
         cases: Option<i64>,
@@ -232,7 +243,7 @@ async fn get_disease_by_id(db: Database, Id(id): Id) -> Result<impl Reply, Rejec
 async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -> Result<impl Reply, Rejection> {
     let conn = db.get().await.map_err(fail)?;
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Disease {
         id: String,
         links: Vec<Link>,
@@ -240,13 +251,13 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
         population: Vec<Population>,
     }
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Link {
         uri: String,
         description: String,
     }
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Stat {
         date: NaiveDate,
         cases: Option<i64>,
@@ -254,7 +265,7 @@ async fn get_disease_by_id_in_region(db: Database, Id(id): Id, Id(region): Id) -
         recoveries: Option<i64>,
     }
 
-    #[derive(serde::Serialize)]
+    #[derive(Serialize)]
     struct Population {
         date: NaiveDate,
         population: Option<i64>,

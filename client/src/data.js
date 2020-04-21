@@ -31,7 +31,7 @@ function freeze(obj) {
 export default {
     region: {
         list: get(() => '/data/region'),
-        get: get(id => `/data/region/${id}`),
+        subregions: get(id => id ? `/data/region/subregions/${id}` : '/data/region/subregions'),
         current: get(() => '/data/region/current'),
     },
 

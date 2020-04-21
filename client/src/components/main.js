@@ -13,7 +13,6 @@ import data from '../data'
 import DiseaseSelect from './disease-select';
 import DiseaseMap from './disease/map';
 import DiseaseFaq from './disease/faq';
-import DiseaseCompare from './disease/compare';
 import DiseaseNews from './disease/news';
 import NotFound from './not-found';
 import { useLoader, Loading, Error } from './loading';
@@ -48,10 +47,6 @@ export default function Main({}) {
 
                 <Route exact path='/disease/:disease/in/:region'>
                     <DiseaseFaq />
-                </Route>
-
-                <Route exact path='/disease/:disease/in/:region/vs/:other'>
-                    <DiseaseCompare />
                 </Route>
 
                 <Route exact path='/disease/:disease/in/:region/news'>

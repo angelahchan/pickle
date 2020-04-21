@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from io import BytesIO
 from psycopg2.extras import execute_values
 from requests import get
-from typing import Optional
+from typing import List, Optional
 from zipfile import ZipFile
 import re, pycountry, psycopg2, os, shapefile, json
 
@@ -35,13 +35,20 @@ exceptions = { 'CC': 'Cocos Islands'
 
 excluded_regions = { 'CN-MO', 'CN-HK', 'CN-TW' }
 
+# The precision of latitude and longitude, in decimal places.
+map_prec = 2
+
 # --- Fetch Region Names and IDs --- #
 
 @dataclass
 class Region:
     iso: str
     name: str
-    geometry: Optional[str] = None
+    geometries: List[str]
+
+    def flatten_geometries(self) -> Optional[str]:
+        if not self.geometries: return None
+        return '{"type":"GeometryCollection","geometries":[' + ','.join(self.geometries) + ']}'
 
 def is_bad_country_name(name):
     words = name.split()
@@ -69,18 +76,24 @@ for country in pycountry.countries:
     elif is_bad_country_name(name):
         print('[ugly name]', iso, '|', name)
 
-    regions[iso] = Region(iso=iso, name=name)
+    regions[iso] = Region(iso=iso, name=name, geometries=[])
 
 for subdivision in pycountry.subdivisions:
     iso  = subdivision.code
     name = subdivision.name
-    regions[iso] = Region(iso=iso, name=name)
+    regions[iso] = Region(iso=iso, name=name, geometries=[])
 
 for iso in excluded_regions:
     if iso in regions:
         regions.pop(iso)
 
 # --- Fetch Geometry --- #
+
+def rounded(prec, o):
+    if isinstance(o, float): return round(o, prec)
+    if isinstance(o, dict): return {k: rounded(prec, v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)): return [rounded(prec, x) for x in o]
+    return o
 
 @contextmanager
 def load_shapefile(url):
@@ -101,7 +114,7 @@ with load_shapefile(country_geo_url) as reader:
             iso = sr.record[iso_attr]
             if iso not in regions: continue
             geojson = sr.shape.__geo_interface__
-            regions[iso].geometry = json.dumps(geojson)
+            regions[iso].geometries += [json.dumps(rounded(map_prec, geojson))]
 
 with load_shapefile(province_geo_url) as reader:
     iso_attr = [x[0] for x in reader.fields if x[0].upper() == 'ISO_3166_2']
@@ -111,10 +124,11 @@ with load_shapefile(province_geo_url) as reader:
             iso = sr.record[iso_attr]
             if iso not in regions: continue
             geojson = sr.shape.__geo_interface__
-            regions[iso].geometry = json.dumps(geojson)
+            regions[iso].geometries += [json.dumps(rounded(map_prec, geojson))]
 
 # --- Fetch Population Data --- #
 
+pops = {}
 q = '''
 SELECT DISTINCT ?region ?population ?date {
     {
@@ -152,7 +166,7 @@ with psycopg2.connect(os.environ['DATABASE_URL']) as conn:
             ON CONFLICT (id) DO UPDATE SET
                 name = excluded.name,
                 geometry = COALESCE(excluded.geometry, region.geometry)
-        ''', [(r.iso, r.name, r.geometry) for r in regions.values()])
+        ''', [(r.iso, r.name, r.flatten_geometries()) for r in regions.values()])
 
         execute_values(cur, '''
             INSERT INTO region_population(region, date, population)
