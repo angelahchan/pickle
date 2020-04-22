@@ -247,21 +247,23 @@ function RegionInformation({ region }) {
     let props = region.properties;
 
     let texts = [
-        ['actives', props.activePerMillion, 'active case per million people', 'active cases per million people', 'blue'],
-        ['cases', props.cases, 'case', 'cases', 'red'],
-        ['deaths', props.deaths, 'death', 'deaths', 'black'],
-        ['recoveries', props.recoveries, 'recovery', 'recoveries', 'green'],
+        ['actives', props.activePerMillion, 'active case per million people', 'active cases per million people', '#D00'],
+        ['cases', props.cases, 'case', 'cases', undefined],
+        ['deaths', props.deaths, 'death', 'deaths', undefined],
+        ['recoveries', props.recoveries, 'recovery', 'recoveries', undefined],
     ];
+
+    let divs = texts.map(([ key, value, sing, plur, color ]) => {
+        if (value == null) return null;
+        return <div style={{ color }}>{Math.round(value)} {value == 1 ? sing : plur}</div>;
+    });
+
+    if (divs.every(x => x == null)) divs.push(<div>No data.</div>);
 
     return (
         <div>
             <h2>{ props.name || 'Unknown Region' }</h2>
-            {
-                texts.map(([ key, value, sing, plur, color ]) => {
-                    if (value == null) return null;
-                    return <p style={{ color }}>{Math.round(value)} {value == 1 ? sing : plur}</p>;
-                })
-            }
+            <p>{divs}</p>
             {
                 props.subdivisible
                     ? <p>Click for a state-by-state breakdown.</p>
