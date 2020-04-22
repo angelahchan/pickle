@@ -123,4 +123,14 @@ DATA
                          }
                        ]
         }
+
+    /data/disease/:disease/in/:region/news
+        latest news about the disease in that region
+
+        [ { title     : string
+          , url       : string
+          , source    : string
+          , published : string
+          }
+        ]
 ```

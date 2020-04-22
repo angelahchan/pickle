@@ -209,3 +209,67 @@ pub async fn get_disease_by_id_in_region(db: Database, id: Id, region: Id) -> Re
 
     Ok(warp::reply::json(&result))
 }
+
+pub async fn get_news(db: Database, id: Id, region: Id) -> Result<impl Reply, Rejection> {
+    let conn = db.get().await.map_err(fail)?;
+    let client = reqwest::Client::new();
+    let region: String = region.into();
+
+    let country_code = match region.find('-') {
+        Some(i) => region.split_at(i).0,
+        None => &region,
+    };
+
+    #[derive(Serialize)]
+    struct Article {
+        /// The title of the article.
+        title: String,
+        /// The URL of the article.
+        url: String,
+        /// The name of the publisher.
+        source: String,
+        /// RFC 3339 date and time.
+        published: chrono::DateTime<chrono::FixedOffset>,
+    }
+
+    let res = conn
+        .query_one("
+            SELECT disease.name, region.name
+            FROM disease, region
+            WHERE disease.id = $1 AND region.id = $2
+        ", &[&id.as_str(), &country_code])
+        .await
+        .map_err(fail)?;
+
+    let disease_name: String = res.get(0);
+    let country_name: String = res.get(1);
+
+    let query = format!("{} {}", disease_name, country_name);
+
+    let res = client
+        .get("https://www.bing.com/news/search")
+        .query(&[("format", "rss"), ("q", &query)])
+        .send()
+        .await
+        .map_err(fail)?
+        .text()
+        .await
+        .map_err(fail)?;
+
+    let chan: rss::Channel = res.parse().map_err(fail)?;
+
+    let result: Vec<Article> = chan
+        .items()
+        .iter()
+        .filter_map(|item| {
+            Some(Article {
+                title: item.title()?.into(),
+                url: item.link()?.into(),
+                published: chrono::DateTime::parse_from_rfc2822(item.pub_date()?).ok()?,
+                source: item.extensions().get("News")?.get("Source")?.first()?.value()?.into(),
+            })
+        })
+        .collect();
+
+    Ok(warp::reply::json(&result))
+}

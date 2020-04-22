@@ -48,9 +48,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         (get() .and(db.with()) .and(path!("region" / "subregions" / Id)) .and_then(|x, y| region::get_subregions(x, Some(y)))).or
         (get() .and(db.with()) .and(path!("region" / "subregions"))      .and_then(|x| region::get_subregions(x, None))      ).or
 
-        (get() .and(db.with()) .and(path!("disease"))                  .and_then(disease::get_diseases)               ).or
-        (get() .and(db.with()) .and(path!("disease" / Id))             .and_then(disease::get_disease_by_id)          ).or
-        (get() .and(db.with()) .and(path!("disease" / Id / "in" / Id)) .and_then(disease::get_disease_by_id_in_region)).or
+        (get() .and(db.with()) .and(path!("disease"))                           .and_then(disease::get_diseases)               ).or
+        (get() .and(db.with()) .and(path!("disease" / Id))                      .and_then(disease::get_disease_by_id)          ).or
+        (get() .and(db.with()) .and(path!("disease" / Id / "in" / Id))          .and_then(disease::get_disease_by_id_in_region)).or
+        (get() .and(db.with()) .and(path!("disease" / Id / "in" / Id / "news")) .and_then(disease::get_news)                   ).or
 
         (not_found())
     );
