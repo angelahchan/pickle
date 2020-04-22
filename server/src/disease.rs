@@ -230,6 +230,8 @@ pub async fn get_news(db: Database, id: Id, region: Id) -> Result<impl Reply, Re
         source: String,
         /// RFC 3339 date and time.
         published: chrono::DateTime<chrono::FixedOffset>,
+        /// A short summary of the article.
+        description: String,
     }
 
     let res = conn
@@ -267,6 +269,7 @@ pub async fn get_news(db: Database, id: Id, region: Id) -> Result<impl Reply, Re
                 url: item.link()?.into(),
                 published: chrono::DateTime::parse_from_rfc2822(item.pub_date()?).ok()?,
                 source: item.extensions().get("News")?.get("Source")?.first()?.value()?.into(),
+                description: item.description()?.into(),
             })
         })
         .collect();

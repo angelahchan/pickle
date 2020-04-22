@@ -38,6 +38,7 @@ export default {
     disease: {
         list: get(() => '/data/disease'),
         get: get(id => `/data/disease/${id}`),
-        inRegion: get((id, region) => `/data/disease/${id}/${region}`),
+        inRegion: get((id, region) => `/data/disease/${id}/in/${region}`),
+        newsInRegion: get((id, region) => `/data/disease/${id}/in/${region}/news`),
     },
 };

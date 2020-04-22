@@ -2,31 +2,51 @@
 
 html {
     font-family: 'Open Sans', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
 }
 
 header {
     font-family: 'Crimson Text', serif;
     text-align: center;
     margin-bottom: 1.67em;
+    font-size: 1.375rem;
+}
+
+a {
+    cursor: pointer;
+    text-decoration: none;
 }
 
 nav a {
     text-decoration: none;
-    color: initial;
+    color: inherit;
 }
 
-nav a.active, a {
+a, a.active {
     color: #0066CC;
+}
+
+a:hover, a.active {
     text-decoration: underline;
 }
 
-nav a:hover {
-    text-decoration: underline;
-}
-
-article {
+.reading-width {
     max-width: 860px;
     margin-left: auto;
     margin-right: auto;
+}
+
+hr {
+    border: 0;
+    height: 0;
+    border-top: 1px solid #AAA;
+}
+
+small {
+    font-size: inherit;
+    opacity: 0.75;
+}
+
+cite {
+    font-style: normal;
 }

@@ -25,7 +25,7 @@ export default function DiseaseSelect({}) {
             <header>
                 <h1>Pickle</h1>
             </header>
-            <article>
+            <div className='reading-width'>
                 <p>
                     Pickle is a website that keeps you up-to-date on the latest pandemic — we give
                     you the latest advice, news and stats in your local region.
@@ -34,7 +34,7 @@ export default function DiseaseSelect({}) {
                     Which disease do you want to know more about?
                 </p>
                 <ul>{select}</ul>
-            </article>
+            </div>
         </div>
     );
 }
