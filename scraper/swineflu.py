@@ -14,7 +14,7 @@ cases = cases.loc[3:176].set_index('Country').iloc[:,3:9]
 deaths = tables[1].rename({'Apr': '2009-04-01', 'May':'2009-05-01', 'Jun':'2009-06-01', 
 'Jul':'2009-07-01', 'Aug':'2009-08-01', 'Sep':'2009-09-09_y','Oct':'2009-10-09_y',
 'Nov':'2009-11-09_y','Dec':'2009-12-09_y'}, axis=1)
-deaths = deaths.loc[2:124].set_index('Country').iloc[:,3:12]
+deaths = deaths.loc[2:124].set_index('Country').iloc[:,3:9]
 res = pd.merge(cases,deaths,on='Country', how='outer').fillna(0)
 
 swine_cases = []
@@ -47,7 +47,7 @@ Swine influenza is an infection caused by any one of several types of swine infl
 disease = {
     'id': 'H1N1',
     'name': 'Swine Flu',
-    'long_name': 'Swine Influenza',
+    'long_name': 'swine influenza',
     'description': description,
     'reinfectable': False,
     'popularity': 2,
